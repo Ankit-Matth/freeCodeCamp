@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button } from '@freecodecamp/react-bootstrap';
 
 import { createSelector } from 'reselect';
 import { connect } from 'react-redux';
@@ -15,14 +14,13 @@ import { apiLocation } from '../../../../config/env.json';
 import { ChallengeMeta } from '../../../redux/prop-types';
 import { Share } from '../../../components/share';
 import { ShareProps } from '../../../components/share/types';
-import ProgressBar from '../../../components/ProgressBar';
+import Progress from '../../../components/Progress';
 import Quote from '../../../assets/icons/quote';
 import {
   challengeMetaSelector,
   completedPercentageSelector
 } from '../redux/selectors';
-
-const lowerJawButtonStyle = 'btn-block btn';
+import callGA from '../../../analytics/call-ga';
 
 interface LowerJawPanelProps extends ShareProps {
   resetButtonText: string;
@@ -98,6 +96,7 @@ const LowerButtonsPanel = ({
       <hr />
       <div className='utility-bar'>
         <button
+          data-playwright-test-label='lowerJaw-reset-button'
           className='btn fade-in'
           data-cy='reset-code-button'
           onClick={resetButtonEvent}
@@ -131,6 +130,7 @@ const LowerJawTips = ({
   return (
     <>
       <div
+        data-playwright-test-label='lowerJaw-failing-test-feedback'
         data-cy='failing-test-feedback'
         className='test-status fade-in'
         aria-hidden={showFeedback}
@@ -138,7 +138,11 @@ const LowerJawTips = ({
         <Fail aria-hidden='true' />
         <p>{learnEncouragementText}</p>
       </div>
-      <div className='hint-status fade-in' aria-hidden={showFeedback}>
+      <div
+        data-playwright-test-label='lowerJaw-failing-hint'
+        className='hint-status fade-in'
+        aria-hidden={showFeedback}
+      >
         <LightBulb aria-hidden='true' />
         <div
           className='hint-description'
@@ -281,27 +285,35 @@ const LowerJaw = ({
     testsLength &&
     (currentAttempts >= testsLength || currentAttempts >= 3);
 
-  const showDesktopButton = window.innerWidth > MAX_MOBILE_WIDTH;
+  const isDesktop = window.innerWidth > MAX_MOBILE_WIDTH;
+  const isMacOS = navigator.userAgent.includes('Mac OS');
 
-  const checkButtonText = showDesktopButton
-    ? t('buttons.check-code')
+  const checkButtonText = isDesktop
+    ? isMacOS
+      ? t('buttons.check-code-3')
+      : t('buttons.check-code')
     : t('buttons.check-code-2');
 
   const showSignInButton = !isSignedIn && challengeIsCompleted;
   return (
     <div className='action-row-container'>
       {showSignInButton && (
-        <Button
+        <a
           data-cy='sign-in-button'
-          block={true}
           href={`${apiLocation}/signin`}
-          className='btn-cta'
+          className='btn-cta btn btn-block'
+          onClick={() => {
+            callGA({
+              event: 'sign_in'
+            });
+          }}
         >
           {t('learn.sign-in-save')}
-        </Button>
+        </a>
       )}
       <button
-        className={lowerJawButtonStyle}
+        data-playwright-test-label='lowerJaw-submit-button'
+        className='btn-block btn'
         data-cy='submit-lowerJaw-button'
         onClick={tryToSubmitChallenge}
         {...(!challengeIsCompleted && { 'aria-hidden': true })}
@@ -310,7 +322,8 @@ const LowerJaw = ({
         {t('buttons.submit-and-go')}
       </button>
       <button
-        className={lowerJawButtonStyle}
+        data-playwright-test-label='lowerJaw-check-button'
+        className='btn-block btn'
         data-cy='check-lowerJaw-button'
         onClick={tryToExecuteChallenge}
         {...(challengeIsCompleted &&
@@ -350,6 +363,7 @@ const LowerJaw = ({
         )}
         {hintRef.current && !challengeIsCompleted && (
           <LowerJawTips
+            data-testid='lowerJaw-tips'
             showFeedback={isFeedbackHidden}
             testText={t('learn.test')}
             htmlDescription={`${hintRef.current}`}
@@ -361,7 +375,7 @@ const LowerJaw = ({
         <>
           <hr></hr>
           <div className='progress-bar-container'>
-            <ProgressBar />
+            <Progress />
           </div>
         </>
       )}

@@ -5,9 +5,10 @@ import {
 } from '@fortawesome/free-brands-svg-icons';
 import { faLink } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Row, Col } from '@freecodecamp/react-bootstrap';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { Col, Row } from '@freecodecamp/ui';
+
 import './social-icons.css';
 
 interface SocialIconsProps {
@@ -85,7 +86,7 @@ function SocialIcons(props: SocialIconsProps): JSX.Element | null {
 
   return (
     <Row>
-      <Col className='text-center social-media-icons' sm={6} smOffset={3}>
+      <Col className='social-icons-row'>
         {linkedin ? LinkedInIcon(linkedin, username) : null}
         {githubProfile ? GitHubIcon(githubProfile, username) : null}
         {website ? WebsiteIcon(website, username) : null}

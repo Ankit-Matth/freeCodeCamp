@@ -43,6 +43,7 @@ const initialState = {
     exitExam: false,
     finishExam: false,
     examResults: false,
+    survey: false,
     projectPreview: false,
     shortcuts: false
   },
@@ -254,7 +255,11 @@ export const reducer = handleActions(
           [payload]: !state.visibleEditors[payload]
         }
       };
-    }
+    },
+    [actionTypes.createQuestion]: (state, { payload }) => ({
+      ...state,
+      description: payload
+    })
   },
   initialState
 );

@@ -1,8 +1,7 @@
-# bookworm was only released on 10-6-2023, so is a little too new.
-FROM node:18-bullseye AS builder
+FROM node:20-bookworm AS builder
 # global installs need root permissions, so have to happen before we switch to
 # the node user
-RUN npm i -g pnpm@8
+RUN npm i -g pnpm@9
 # node images create a non-root user that we can use
 USER node
 WORKDIR /home/node/build
@@ -34,19 +33,19 @@ RUN pnpm build:curriculum
 
 RUN pnpm build:server
 
-FROM node:18-bullseye AS deps
+FROM node:20-bookworm AS deps
 
 WORKDIR /home/node/build
 COPY --chown=node:node pnpm*.yaml .
 COPY --chown=node:node api-server/package.json api-server/package.json
 COPY --chown=node:node shared/package.json shared/package.json
 
-RUN npm i -g pnpm@8
+RUN npm i -g pnpm@9
 # Prevent pnpm installing unnecessary packages (see above)
 RUN pnpm config set dedupe-peer-dependents false
 RUN pnpm -F=api-server -F=shared install --prod --ignore-scripts
 
-FROM node:18-alpine
+FROM node:20-alpine
 RUN npm i -g pm2@4
 USER node
 WORKDIR /home/node/fcc

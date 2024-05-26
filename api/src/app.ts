@@ -1,6 +1,5 @@
-import fastifyCookie from '@fastify/cookie';
 import fastifyCsrfProtection from '@fastify/csrf-protection';
-import middie from '@fastify/middie';
+import express from '@fastify/express';
 import fastifySession from '@fastify/session';
 import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUI from '@fastify/swagger-ui';
@@ -18,34 +17,33 @@ import Fastify, {
   RawRequestDefaultExpression,
   RawServerDefault
 } from 'fastify';
-import fastifyAuth0 from 'fastify-auth0-verify';
 
 import prismaPlugin from './db/prisma';
-import { testMiddleware } from './middleware';
+import cookies from './plugins/cookies';
 import cors from './plugins/cors';
-import jwtAuthz from './plugins/fastify-jwt-authz';
 import { NodemailerProvider } from './plugins/mail-providers/nodemailer';
 import { SESProvider } from './plugins/mail-providers/ses';
 import mailer from './plugins/mailer';
 import redirectWithMessage from './plugins/redirect-with-message';
 import security from './plugins/security';
 import sessionAuth from './plugins/session-auth';
+import codeFlowAuth from './plugins/code-flow-auth';
+import { mobileAuth0Routes } from './routes/auth';
+import { devAuthRoutes } from './routes/auth-dev';
 import {
-  auth0Routes,
-  devLoginCallback,
-  devLegacyAuthRoutes
-} from './routes/auth';
+  protectedCertificateRoutes,
+  unprotectedCertificateRoutes
+} from './routes/certificate';
 import { challengeRoutes } from './routes/challenge';
 import { deprecatedEndpoints } from './routes/deprecated-endpoints';
 import { unsubscribeDeprecated } from './routes/deprecated-unsubscribe';
 import { donateRoutes } from './routes/donate';
+import { emailSubscribtionRoutes } from './routes/email-subscription';
 import { settingRoutes } from './routes/settings';
 import { statusRoute } from './routes/status';
 import { userGetRoutes, userRoutes } from './routes/user';
 import {
   API_LOCATION,
-  AUTH0_AUDIENCE,
-  AUTH0_DOMAIN,
   COOKIE_DOMAIN,
   EMAIL_PROVIDER,
   FCC_ENABLE_DEV_LOGIN_MODE,
@@ -106,17 +104,14 @@ export const build = async (
     return { hello: 'world' };
   });
   // NOTE: Awaited to ensure `.use` is registered on `fastify`
-  await fastify.register(middie);
+  await fastify.register(express);
   if (SENTRY_DSN) {
     await fastify.register(fastifySentry, { dsn: SENTRY_DSN });
   }
 
   await fastify.register(cors);
-  await fastify.register(fastifyCookie);
+  await fastify.register(cookies);
 
-  // @ts-expect-error @fastify/csrf-protection is overly restrictive, here. It
-  // requires an hmacKey if getToken is provided, but that should only be a
-  // requirement if the getUserInfo function is provided.
   void fastify.register(fastifyCsrfProtection, {
     // TODO: consider signing cookies. We don't on the api-server, but we could
     // as an extra layer of security.
@@ -126,17 +121,21 @@ export const build = async (
     getToken: req => req.headers['csrf-token'] as string
   });
 
-  // All routes should add a CSRF token to the response
+  // All routes except signout should add a CSRF token to the response
   fastify.addHook('onRequest', (_req, reply, done) => {
-    const token = reply.generateCsrf();
-    // Path is necessary to ensure that only one cookie is set and it is valid
-    // for all routes.
-    void reply.setCookie('csrf_token', token, {
-      path: '/',
-      sameSite: 'strict',
-      domain: COOKIE_DOMAIN,
-      secure: FREECODECAMP_NODE_ENV === 'production'
-    });
+    const isSignout = _req.url === '/signout' || _req.url === '/signout/';
+
+    if (!isSignout) {
+      const token = reply.generateCsrf();
+      // Path is necessary to ensure that only one cookie is set and it is valid
+      // for all routes.
+      void reply.setCookie('csrf_token', token, {
+        path: '/',
+        sameSite: 'strict',
+        domain: COOKIE_DOMAIN,
+        secure: FREECODECAMP_NODE_ENV === 'production'
+      });
+    }
     done();
   });
 
@@ -197,27 +196,20 @@ export const build = async (
     fastify.log.info(`Swagger UI available at ${API_LOCATION}/documentation`);
   }
 
-  // Auth0 plugin
-  void fastify.register(fastifyAuth0, {
-    domain: AUTH0_DOMAIN,
-    audience: AUTH0_AUDIENCE
-  });
-  void fastify.register(jwtAuthz);
   void fastify.register(sessionAuth);
-
-  void fastify.use('/test', testMiddleware);
-
+  void fastify.register(codeFlowAuth);
   void fastify.register(prismaPlugin);
-
-  void fastify.register(auth0Routes, { prefix: '/auth' });
+  void fastify.register(mobileAuth0Routes);
   if (FCC_ENABLE_DEV_LOGIN_MODE) {
-    void fastify.register(devLoginCallback, { prefix: '/auth' });
-    void fastify.register(devLegacyAuthRoutes);
+    void fastify.register(devAuthRoutes);
   }
   void fastify.register(challengeRoutes);
   void fastify.register(settingRoutes);
   void fastify.register(donateRoutes);
+  void fastify.register(emailSubscribtionRoutes);
   void fastify.register(userRoutes);
+  void fastify.register(protectedCertificateRoutes);
+  void fastify.register(unprotectedCertificateRoutes);
   void fastify.register(userGetRoutes);
   void fastify.register(deprecatedEndpoints);
   void fastify.register(statusRoute);

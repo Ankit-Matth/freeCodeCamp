@@ -49,6 +49,16 @@ const msTrophy = path.resolve(
   '../../src/templates/Challenges/ms-trophy/show.tsx'
 );
 
+const dialogue = path.resolve(
+  __dirname,
+  '../../src/templates/Challenges/dialogue/show.tsx'
+);
+
+const fillInTheBlank = path.resolve(
+  __dirname,
+  '../../src/templates/Challenges/fill-in-the-blank/show.tsx'
+);
+
 const views = {
   backend,
   classic,
@@ -58,7 +68,9 @@ const views = {
   codeAlly,
   odin,
   exam,
-  msTrophy
+  msTrophy,
+  dialogue,
+  fillInTheBlank
   // quiz: Quiz
 };
 
@@ -157,9 +169,12 @@ function getProjectPreviewConfig(challenge, allChallengeEdges) {
     showProjectPreview:
       challengeOrder === 0 &&
       usesMultifileEditor &&
+      // TODO: handle the special cases better. Create a meta property for
+      // showProjectPreview, maybe? Then we can remove all the following cases
       challengeType !== challengeTypes.multifileCertProject &&
-      // TODO: revert this to enable project previews for python challenges
-      challengeType !== challengeTypes.python,
+      challengeType !== challengeTypes.multifilePythonCertProject &&
+      challengeType !== challengeTypes.python &&
+      challengeType !== challengeTypes.js,
     challengeData: {
       challengeType: lastChallenge.challengeType,
       challengeFiles: projectPreviewChallengeFiles

@@ -72,11 +72,6 @@
   border-bottom: 4px solid var(--tertiary-background);
 }
 
-.video-quiz-input-hidden {
-  position: absolute;
-  left: -9999px;
-}
-
 .video-quiz-input-visible {
   margin-inline-end: 15px;
   position: relative;
@@ -118,4 +113,8 @@ input:focus-visible + .video-quiz-input-visible {
   margin: 0;
   /* remove default prism background */
   background: none;
+}
+
+.multiple-choice-feedback p {
+  margin-bottom: 0;
 }

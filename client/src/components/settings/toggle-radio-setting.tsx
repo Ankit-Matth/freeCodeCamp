@@ -1,5 +1,4 @@
 import React from 'react';
-import '../helpers/toggle-button.css';
 import './toggle-setting.css';
 
 export type ToggleSettingProps = {
@@ -10,6 +9,8 @@ export type ToggleSettingProps = {
   toggleFlag: () => void;
   offLabel: string;
   onLabel: string;
+  dataPlaywrightTestOffLabel?: string;
+  dataPlaywrightTestOnLabel?: string;
 };
 
 export default function ToggleRadioSetting({

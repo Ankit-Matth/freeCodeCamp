@@ -42,6 +42,7 @@ type MultifileEditorProps = Pick<
 > & {
   visibleEditors: VisibleEditors;
 };
+
 const mapStateToProps = createSelector(
   visibleEditorsSelector,
   canFocusEditorSelector,
@@ -126,6 +127,7 @@ const MultifileEditor = (props: MultifileEditorProps) => {
               return (
                 <ReflexElement
                   data-cy={`editor-container-${key}`}
+                  data-playwright-test-label={`editor-container-${key}`}
                   {...reflexProps}
                   {...resizeProps}
                   key={key}

@@ -7,10 +7,6 @@ test.beforeEach(async ({ page }) => {
   await page.goto('/');
 });
 
-test.afterEach(async ({ page }) => {
-  await page.close();
-});
-
 test.describe('Signout Modal component', () => {
   test('renders the modal correctly', async ({ page }) => {
     await page.getByRole('button', { name: translations.buttons.menu }).click();
@@ -18,7 +14,10 @@ test.describe('Signout Modal component', () => {
       .getByRole('button', { name: translations.buttons['sign-out'] })
       .click();
 
-    await expect(page.getByText(translations.signout.heading)).toBeVisible();
+    await expect(
+      page.getByRole('dialog', { name: translations.signout.heading })
+    ).toBeVisible();
+
     await expect(page.getByText(translations.signout.p1)).toBeVisible();
     await expect(page.getByText(translations.signout.p2)).toBeVisible();
 
@@ -41,10 +40,17 @@ test.describe('Signout Modal component', () => {
       .getByRole('button', { name: translations.buttons['sign-out'] })
       .click();
 
+    await expect(
+      page.getByRole('dialog', { name: translations.signout.heading })
+    ).toBeVisible();
+
     await page
       .getByRole('button', { name: translations.signout.certain })
       .click();
 
+    await expect(
+      page.getByRole('dialog', { name: translations.signout.heading })
+    ).not.toBeVisible();
     await expect(page).toHaveURL(/.*\/learn\/?$/);
   });
 
@@ -54,13 +60,18 @@ test.describe('Signout Modal component', () => {
       .getByRole('button', { name: translations.buttons['sign-out'] })
       .click();
 
+    await expect(
+      page.getByRole('dialog', { name: translations.signout.heading })
+    ).toBeVisible();
+
     await page
       .getByRole('button', { name: translations.signout.nevermind })
       .click();
 
-    await expect(page).toHaveURL('/');
     await expect(
-      page.getByText(translations.signout.heading)
+      page.getByRole('dialog', { name: translations.signout.heading })
     ).not.toBeVisible();
+
+    await expect(page).toHaveURL('/');
   });
 });

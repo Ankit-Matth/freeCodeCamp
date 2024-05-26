@@ -1,6 +1,11 @@
 /* This module's job is to parse the database output and prepare it for
 serialization */
-import { ProfileUI, CompletedChallenge } from '@prisma/client';
+import {
+  ProfileUI,
+  CompletedChallenge,
+  ExamResults,
+  type Survey
+} from '@prisma/client';
 import _ from 'lodash';
 
 type NullToUndefined<T> = T extends null ? undefined : T;
@@ -81,6 +86,7 @@ type NormalizedChallenge = {
   id: string;
   isManuallyApproved?: boolean;
   solution?: string;
+  examResults?: ExamResults;
 };
 
 /**
@@ -104,4 +110,43 @@ export const normalizeChallenges = (
   });
 
   return noNullPath;
+};
+
+type NormalizedSurvey = {
+  title: string;
+  responses: {
+    question: string;
+    response: string;
+  }[];
+};
+
+/**
+ * Remove the extra properties from the SurveyResults array.
+ *
+ * @param surveyResults The SurveyResults array.
+ * @returns The input without the id and userid.
+ */
+export const normalizeSurveys = (
+  surveyResults: Survey[]
+): NormalizedSurvey[] => {
+  return surveyResults.map(survey => {
+    const { title, responses } = survey;
+    return { title, responses };
+  });
+};
+
+/**
+ * Replace null flags with false.
+ * @param flags Object with nullable boolean flags.
+ * @returns Same object with boolean flags, defaulting to false.
+ */
+export const normalizeFlags = <T extends Record<string, boolean | null>>(
+  flags: T
+): { [K in keyof T]: boolean } => {
+  const out = {} as { [K in keyof T]: boolean };
+  for (const key in flags) {
+    const v = flags[key];
+    out[key] = typeof v === 'boolean' ? v : false;
+  }
+  return out;
 };

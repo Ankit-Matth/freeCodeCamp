@@ -1,11 +1,3 @@
-import {
-  FormGroup,
-  FormControl,
-  ControlLabel,
-  Row,
-  Col,
-  Button
-} from '@freecodecamp/react-bootstrap';
 import { Link } from 'gatsby';
 import { isString } from 'lodash-es';
 import React, { useState, type FormEvent, type ChangeEvent } from 'react';
@@ -17,8 +9,16 @@ import { bindActionCreators } from 'redux';
 import type { Dispatch } from 'redux';
 import { createSelector } from 'reselect';
 import isEmail from 'validator/lib/isEmail';
+import {
+  Container,
+  FormGroup,
+  FormControl,
+  ControlLabel,
+  Col,
+  Row,
+  Button
+} from '@freecodecamp/ui';
 
-import { Container } from '@freecodecamp/ui';
 import { Spacer } from '../components/helpers';
 import './update-email.css';
 import { userSelector } from '../redux/selectors';
@@ -49,12 +49,12 @@ function UpdateEmail({ isNewEmail, t, updateMyEmail }: UpdateEmailProps) {
     updateMyEmail(emailValue);
   }
 
-  function onChange(event: ChangeEvent) {
-    const change = (event.target as HTMLInputElement).value;
-    if (!isString(change)) {
+  function onChange(event: ChangeEvent<HTMLInputElement>) {
+    const newEmailValue = event.target.value;
+    if (!isString(newEmailValue)) {
       return null;
     }
-    setEmailValue(change);
+    setEmailValue(newEmailValue);
     return null;
   }
 
@@ -87,25 +87,25 @@ function UpdateEmail({ isNewEmail, t, updateMyEmail }: UpdateEmailProps) {
               >
                 <FormGroup
                   className='update-email-field'
-                  controlId='emailInput'
                   validationState={getEmailValidationState()}
                 >
-                  <ControlLabel>{t('misc.email')}</ControlLabel>
+                  <ControlLabel htmlFor='emailInput'>
+                    {t('misc.email')}
+                  </ControlLabel>
                   <FormControl
+                    id='emailInput'
                     onChange={onChange}
                     placeholder='camperbot@example.com'
                     required={true}
                     type='email'
-                    data-playwright-test-label='update-email-input'
                   />
                 </FormGroup>
                 <Button
                   block={true}
-                  bsSize='lg'
-                  bsStyle='primary'
+                  size='large'
+                  variant='primary'
                   disabled={getEmailValidationState() !== 'success'}
                   type='submit'
-                  data-playwright-test-label='update-email-submit-button'
                 >
                   {isNewEmail
                     ? t('buttons.update-email')
@@ -113,12 +113,7 @@ function UpdateEmail({ isNewEmail, t, updateMyEmail }: UpdateEmailProps) {
                 </Button>
               </form>
               <p className='text-center'>
-                <Link
-                  to='/signout'
-                  data-playwright-test-label='update-email-sign-out-button'
-                >
-                  {t('buttons.sign-out')}
-                </Link>
+                <Link to='/signout'>{t('buttons.sign-out')}</Link>
               </p>
             </Row>
           </Col>

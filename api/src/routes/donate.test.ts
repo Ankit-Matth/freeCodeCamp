@@ -1,5 +1,12 @@
-/* eslint-disable @typescript-eslint/naming-convention */
-import { devLogin, setupServer, superRequest } from '../../jest.utils';
+import type { Prisma } from '@prisma/client';
+import {
+  createSuperRequest,
+  devLogin,
+  setupServer,
+  superRequest,
+  defaultUserEmail
+} from '../../jest.utils';
+import { createUserInput } from '../utils/create-user';
 
 const chargeStripeCardReqBody = {
   paymentMethodId: 'UID',
@@ -40,14 +47,52 @@ jest.mock('stripe', () => {
   });
 });
 
+const userWithoutProgress: Prisma.userCreateInput =
+  createUserInput(defaultUserEmail);
+
+const userWithProgress: Prisma.userCreateInput = {
+  ...createUserInput(defaultUserEmail),
+  completedChallenges: [
+    {
+      id: 'a6b0bb188d873cb2c8729495',
+      completedDate: 1520002973119,
+      solution: null,
+      challengeType: 5
+    },
+    {
+      id: '33b0bb188d873cb2c8729433',
+      completedDate: 4420002973122,
+      solution: null,
+      challengeType: 5
+    },
+    {
+      id: 'a5229172f011153519423690',
+      completedDate: 1520440323273,
+      solution: null,
+      challengeType: 5
+    },
+    {
+      id: 'a5229172f011153519423692',
+      completedDate: 1520440323274,
+      githubLink: '',
+      challengeType: 5
+    }
+  ]
+};
+
 describe('Donate', () => {
   setupServer();
 
   describe('Authenticated User', () => {
-    let setCookies: string[];
+    let superPost: ReturnType<typeof createSuperRequest>;
 
     beforeEach(async () => {
-      setCookies = await devLogin();
+      const setCookies = await devLogin();
+      superPost = createSuperRequest({ method: 'POST', setCookies });
+      await fastifyTestInstance.prisma.user.updateMany({
+        where: { email: userWithProgress.email },
+        data: userWithProgress
+      });
     });
 
     describe('POST /donate/charge-stripe-card', () => {
@@ -55,10 +100,9 @@ describe('Donate', () => {
         mockSubCreate.mockImplementationOnce(
           generateMockSubCreate('we only care about specific error cases')
         );
-        const response = await superRequest('/donate/charge-stripe-card', {
-          method: 'POST',
-          setCookies
-        }).send(chargeStripeCardReqBody);
+        const response = await superPost('/donate/charge-stripe-card').send(
+          chargeStripeCardReqBody
+        );
         expect(response.body).toEqual({ isDonating: true, type: 'success' });
         expect(response.status).toBe(200);
       });
@@ -67,15 +111,16 @@ describe('Donate', () => {
         mockSubCreate.mockImplementationOnce(
           generateMockSubCreate('requires_source_action')
         );
-        const response = await superRequest('/donate/charge-stripe-card', {
-          method: 'POST',
-          setCookies
-        }).send(chargeStripeCardReqBody);
+        const response = await superPost('/donate/charge-stripe-card').send(
+          chargeStripeCardReqBody
+        );
 
         expect(response.body).toEqual({
-          type: 'UserActionRequired',
-          message: 'Payment requires user action',
-          client_secret: 'superSecret'
+          error: {
+            type: 'UserActionRequired',
+            message: 'Payment requires user action',
+            client_secret: 'superSecret'
+          }
         });
         expect(response.status).toBe(402);
       });
@@ -84,14 +129,15 @@ describe('Donate', () => {
         mockSubCreate.mockImplementationOnce(
           generateMockSubCreate('requires_source')
         );
-        const response = await superRequest('/donate/charge-stripe-card', {
-          method: 'POST',
-          setCookies
-        }).send(chargeStripeCardReqBody);
+        const response = await superPost('/donate/charge-stripe-card').send(
+          chargeStripeCardReqBody
+        );
 
         expect(response.body).toEqual({
-          type: 'PaymentMethodRequired',
-          message: 'Card has been declined'
+          error: {
+            type: 'PaymentMethodRequired',
+            message: 'Card has been declined'
+          }
         });
         expect(response.status).toBe(402);
       });
@@ -100,42 +146,55 @@ describe('Donate', () => {
         mockSubCreate.mockImplementationOnce(
           generateMockSubCreate('still does not matter')
         );
-        const successResponse = await superRequest(
-          '/donate/charge-stripe-card',
-          {
-            method: 'POST',
-            setCookies
-          }
+        const successResponse = await superPost(
+          '/donate/charge-stripe-card'
         ).send(chargeStripeCardReqBody);
 
         expect(successResponse.status).toBe(200);
-        const failResponse = await superRequest('/donate/charge-stripe-card', {
-          method: 'POST',
-          setCookies
-        }).send(chargeStripeCardReqBody);
+        const failResponse = await superPost('/donate/charge-stripe-card').send(
+          chargeStripeCardReqBody
+        );
+        expect(failResponse.body).toEqual({
+          error: {
+            type: 'AlreadyDonatingError',
+            message: 'User is already donating.'
+          }
+        });
         expect(failResponse.status).toBe(400);
       });
 
       it('should return 500 if Stripe encountes an error', async () => {
         mockSubCreate.mockImplementationOnce(defaultError);
-        const response = await superRequest('/donate/charge-stripe-card', {
-          method: 'POST',
-          setCookies
-        }).send(chargeStripeCardReqBody);
+        const response = await superPost('/donate/charge-stripe-card').send(
+          chargeStripeCardReqBody
+        );
         expect(response.status).toBe(500);
         expect(response.body).toEqual({
-          type: 'danger',
-          message: 'Donation failed due to a server error.'
+          error: 'Donation failed due to a server error.'
         });
+      });
+
+      it('should return 400 if user has not completed challenges', async () => {
+        await fastifyTestInstance.prisma.user.updateMany({
+          where: { email: userWithProgress.email },
+          data: userWithoutProgress
+        });
+        const failResponse = await superPost('/donate/charge-stripe-card').send(
+          chargeStripeCardReqBody
+        );
+        expect(failResponse.body).toEqual({
+          error: {
+            type: 'MethodRestrictionError',
+            message: `Donate using another method`
+          }
+        });
+        expect(failResponse.status).toBe(400);
       });
     });
 
     describe('POST /donate/add-donation', () => {
       it('should return 200 and update the user', async () => {
-        const response = await superRequest('/donate/add-donation', {
-          method: 'POST',
-          setCookies
-        }).send({
+        const response = await superPost('/donate/add-donation').send({
           anything: true,
           itIs: 'ignored'
         });
@@ -147,15 +206,11 @@ describe('Donate', () => {
       });
 
       it('should return 400 if the user is already donating', async () => {
-        const successResponse = await superRequest('/donate/add-donation', {
-          method: 'POST',
-          setCookies
-        }).send({});
+        const successResponse = await superPost('/donate/add-donation').send(
+          {}
+        );
         expect(successResponse.status).toBe(200);
-        const failResponse = await superRequest('/donate/add-donation', {
-          method: 'POST',
-          setCookies
-        }).send({});
+        const failResponse = await superPost('/donate/add-donation').send({});
         expect(failResponse.status).toBe(400);
       });
     });

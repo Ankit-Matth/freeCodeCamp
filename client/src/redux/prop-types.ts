@@ -22,7 +22,6 @@ export type MarkdownRemark = {
   fileAbsolutePath: string;
   frontmatter: {
     block: string;
-    isBeta: boolean;
     superBlock: SuperBlocks;
     // TODO: make enum like superBlock
     certification: string;
@@ -47,11 +46,22 @@ export type MarkdownRemark = {
   };
 };
 
+export type MultipleChoiceAnswer = {
+  answer: string;
+  feedback: string | null;
+};
+
 export type Question = {
   text: string;
-  answers: string[];
+  answers: MultipleChoiceAnswer[];
   solution: number;
 };
+
+export type FillInTheBlank = {
+  sentence: string;
+  blanks: MultipleChoiceAnswer[];
+};
+
 export type Fields = {
   slug: string;
   blockHashSlug: string;
@@ -76,9 +86,79 @@ export interface VideoLocaleIds {
   portuguese?: string;
 }
 
+// English types for animations
+export interface Dialogue {
+  text: string;
+  align: 'left' | 'right' | 'center';
+}
+
+export interface CharacterPosition {
+  x?: number;
+  y?: number;
+  z?: number;
+}
+
+export interface SceneCommand {
+  background?: string;
+  character: string;
+  position?: CharacterPosition;
+  opacity?: number;
+  startTime: number;
+  finishTime?: number;
+  dialogue?: Dialogue;
+}
+
+export type Characters =
+  | 'Alice'
+  | 'Amy'
+  | 'Anna'
+  | 'Bob'
+  | 'Brian'
+  | 'Candidate'
+  | 'David'
+  | 'Delivery Man'
+  | 'Expert'
+  | 'Jake'
+  | 'James'
+  | 'Linda'
+  | 'Lisa'
+  | 'Maria'
+  | 'Mark'
+  | 'Sarah'
+  | 'Second Candidate'
+  | 'Sophie'
+  | 'Tom';
+
+export interface SetupCharacter {
+  character: Characters;
+  position: CharacterPosition;
+  opacity: number;
+  isTalking?: boolean;
+}
+
+export interface SetupAudio {
+  filename: string;
+  startTime: number;
+  startTimestamp?: number;
+  finishTimestamp?: number;
+}
+
+export interface SceneSetup {
+  background: string;
+  characters: SetupCharacter[];
+  audio: SetupAudio;
+  alwaysShowDialogue?: boolean;
+}
+
+export interface FullScene {
+  setup: SceneSetup;
+  commands: SceneCommand[];
+}
+
 export interface PrerequisiteChallenge {
   id: string;
   title: string;
+  slug?: string;
 }
 
 export type ChallengeWithCompletedNode = {
@@ -97,6 +177,7 @@ export type ChallengeWithCompletedNode = {
 
 export type ChallengeNode = {
   challenge: {
+    audioPath: string;
     block: string;
     certification: string;
     challengeOrder: number;
@@ -105,6 +186,7 @@ export type ChallengeNode = {
     description: string;
     challengeFiles: ChallengeFiles;
     fields: Fields;
+    fillInTheBlank: FillInTheBlank;
     forumTopicId: number;
     guideUrl: string;
     head: string[];
@@ -126,13 +208,13 @@ export type ChallengeNode = {
     msTrophyId: string;
     notes: string;
     prerequisites: PrerequisiteChallenge[];
-    removeComments: boolean;
     isLocked: boolean;
     isPrivate: boolean;
     order: number;
     question: Question;
     assignments: string[];
     required: Required[];
+    scene: FullScene;
     solutions: {
       [T in FileKey]: FileKeyChallenge;
     };
@@ -205,6 +287,7 @@ export type User = {
   about: string;
   acceptedPrivacyTerms: boolean;
   completedChallenges: CompletedChallenge[];
+  completedSurveys: SurveyResults[];
   currentChallengeId: string;
   email: string;
   emailVerified: boolean;
@@ -266,6 +349,7 @@ export type ClaimedCertifications = {
   isSciCompPyCertV7: boolean;
   isDataAnalysisPyCertV7: boolean;
   isMachineLearningPyCertV7: boolean;
+  isJsAlgoDataStructCertV8: boolean;
 };
 
 type SavedChallenges = SavedChallenge[];
@@ -307,7 +391,6 @@ export type ChallengeMeta = {
   isFirstStep: boolean;
   nextChallengePath: string | null;
   prevChallengePath: string | null;
-  removeComments: boolean;
   superBlock: SuperBlocks;
   title?: string;
   challengeType?: number;
@@ -340,7 +423,7 @@ export type ChallengeFile = {
   name: string;
   editableRegionBoundaries?: number[];
   usesMultifileEditor?: boolean;
-  error: null | string | unknown;
+  error?: unknown;
   head: string;
   tail: string;
   seed: string;
@@ -406,4 +489,15 @@ export interface GeneratedExamResults {
   passingPercent: number;
   passed: boolean;
   examTimeInSeconds: number;
+}
+
+// Survey related types
+export interface SurveyResponse {
+  question: string;
+  response: string;
+}
+
+export interface SurveyResults {
+  title: string;
+  responses: SurveyResponse[];
 }
